@@ -13,6 +13,7 @@
 #include <util/delay.h>
 #include <stdbool.h>
 #include <string.h>
+#include <acx.h>
 
 #define SENSOR_PIN = 0
 #define SENSOR_MASK = 1 << SENSOR_PIN
@@ -31,6 +32,7 @@ char serial_read(void);
 
 int main(void) {
    serial_setup();
+   sensor_setup();
     while (1) 
     {
        
@@ -38,16 +40,18 @@ int main(void) {
 }
 
 word sensor_read() {
+   //Send signal to tell sensor to send data
    PORTF &= !SENSOR_MASK;
    _delay_ms(5);
    PORTF |= SENSOR_MASK;
    delay(40);
+   
    //Check if low
    delay(80);
    //Check if high
    delay(80);
    
-   //Temp
+   //Humidity
    word temp = 0;
    for(int i = 0; i < 16; i++) {
       //start of number
@@ -62,7 +66,7 @@ word sensor_read() {
       temp = temp << 1;
    }
    
-   //Humidity
+   //Temperature
    word humid = 0;
    for(int i = 0; i < 16; i++) {
       //start of number
@@ -94,9 +98,11 @@ word sensor_read() {
    
 }
 
-void delay(int us) {
-   byte curr_pin = PINF & SENSOR_MASK;
-   for(int i = 0; i < ms; i++) {
+void delay(int us) {;
+   int curr_pin = PINF & SENSOR_MASK;
+   
+   int loop_end = us / 5;
+   for(int i = 0; i < loop_end; i++) {
       if((PINF & SENSOR_MASK) != curr_pin)
          break;
      delay_usec(5);
