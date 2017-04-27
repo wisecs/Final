@@ -10,102 +10,104 @@
  */ 
 
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include <util/delay.h>
 #include <stdbool.h>
 #include <string.h>
-#include <acx.h>
+#include "acx.h"
 
-#define SENSOR_PIN = 0
-#define SENSOR_MASK = 1 << SENSOR_PIN
-#define LED_PIN = 1
-#define LED_MASK = 1 << LED_PIN
+#define SENSOR_PIN 0
+#define SENSOR_MASK 1 << SENSOR_PIN
+#define LED_PIN 1
+#define LED_MASK 1 << LED_PIN
 
 typedef uint8_t byte;
 typedef uint16_t word;
 
 void delay_usec(byte);
+void polled_wait(void);
 void serial_setup(void);
 void serial_write(char);
 void serial_write_word(char *);
 char serial_read(void);
+void sensor_setup(void);
+word sensor_read(void);
 //char * serial_read_word(void);
 
 int main(void) {
+   _delay_ms(1000);
    serial_setup();
-   sensor_setup();
+   
     while (1) 
     {
+       word humid = sensor_read();
+       char test_hi = humid >> 8;
+       char test_lo = (char) humid;
        
+       serial_write(test_hi);
+       serial_write(test_lo);
+       serial_write(' ');
+       serial_write('\n');
+       
+       _delay_ms(1000);
     }
 }
 
-word sensor_read() {
+word sensor_read(void) {
+   sei();
+   
    //Send signal to tell sensor to send data
-   PORTF &= !SENSOR_MASK;
+   DDRF |= SENSOR_MASK;    //Sets SENSOR_PIN for output from the temperature sensor
+   PORTF &= !SENSOR_MASK;  //Push pin LOW
    _delay_ms(5);
-   PORTF |= SENSOR_MASK;
-   delay(40);
+   DDRF &= ~SENSOR_MASK;   //Sets SENSOR_PIN for input from the temperature sensor
+   PORTF |= SENSOR_MASK;   //Sets SENSOR_PIN to idle at high
+   polled_wait();          //Should begin receiving in 20-40 microseconds
    
    //Check if low
-   delay(80);
+   delay_usec(80);
    //Check if high
-   delay(80);
+   delay_usec(85);
    
-   //Humidity
+   word humidity = 0;
+   for(int i = 0; i < 16; i++) {
+      polled_wait();
+      delay_usec(40);
+      
+      if(PINF & SENSOR_MASK) { //Bit is a 1
+         humidity = humidity << 1;
+         humidity |= 0x0001;
+         delay_usec(40);
+      } else {//Bit is a zero
+         humidity = humidity << 1;
+         //humidity = humidity & ~1;
+      }         
+   }
+   
    word temp = 0;
    for(int i = 0; i < 16; i++) {
-      //start of number
-      delay(50);
-      delay(30);
-      if((PINF & SENSOR_MASK == 0))
-         temp &= ~0x01;
-      else {
-         temp |= 0x01;
-         delay(40);
-      }         
-      temp = temp << 1;
-   }
-   
-   //Temperature
-   word humid = 0;
-   for(int i = 0; i < 16; i++) {
-      //start of number
-      delay(50);
-      delay(30);
-      if((PINF & SENSOR_MASK == 0))
-      humid &= ~0x01;
-      else {
-         humid |= 0x01;
-         delay(40);
+      polled_wait();
+      delay_usec(40);
+      
+      if(PINF & SENSOR_MASK) { //Bit is a 1
+         temp = temp << 1;
+         temp |= 0x0001;
+         delay_usec(40);
+         } else {//Bit is a zero
+         temp = temp << 1;
+         //humidity = humidity & ~1;
       }
-      humid = humid << 1;
    }
    
-   //Checksum
-   byte check = 0;
-   for(int i = 0; i < 8; i++) {
-      //start of number
-      delay(50);
-      delay(30);
-      if((PINF & SENSOR_MASK == 0))
-      check &= ~0x01;
-      else {
-         check |= 0x01;
-         delay(40);
-      }
-      check = check << 1;
-   }
-   
+   cli();
+   return temp;
 }
 
-void delay(int us) {;
+void polled_wait(void) {
    int curr_pin = PINF & SENSOR_MASK;
    
-   int loop_end = us / 5;
-   for(int i = 0; i < loop_end; i++) {
-      if((PINF & SENSOR_MASK) != curr_pin)
-         break;
-     delay_usec(5);
+   while((PINF & SENSOR_MASK) == curr_pin) {
+      //delay_usec(5);
    }
 }
 

@@ -9,7 +9,7 @@
 		.global	delay_usec
 
  delay_usec:		;4 cycles of RCALL
-					;2 cycles for parameter => parameter is in r24 and r25
+					   ;2 cycles for parameter => parameter is in r24 and r25
 	ldi r18, 0x01	;set to one
 	eor r19, r19	;zero out high bits
 	cp	r18, r24
