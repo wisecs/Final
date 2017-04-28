@@ -13,6 +13,7 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 #include "acx.h"
 
@@ -31,7 +32,7 @@ void serial_write(char);
 void serial_write_word(char *);
 char serial_read(void);
 void sensor_setup(void);
-word sensor_read(void);
+char * sensor_read(void);
 //char * serial_read_word(void);
 
 int main(void) {
@@ -40,20 +41,24 @@ int main(void) {
    
     while (1) 
     {
-       word humid = sensor_read();
-       char test_hi = humid >> 8;
-       char test_lo = (char) humid;
+       char * temp = sensor_read();
+       
+         
+       serial_write_word(temp);
+       
+       /*char test_hi = temp >> 8;
+       char test_lo = (char) temp;
        
        serial_write(test_hi);
        serial_write(test_lo);
        serial_write(' ');
-       serial_write('\n');
+       serial_write('\n');*/
        
        _delay_ms(1000);
     }
 }
 
-word sensor_read(void) {
+char * sensor_read(void) {
    sei();
    
    //Send signal to tell sensor to send data
@@ -65,9 +70,11 @@ word sensor_read(void) {
    polled_wait();          //Should begin receiving in 20-40 microseconds
    
    //Check if low
-   delay_usec(80);
+   //delay_usec(80);
+   polled_wait();
    //Check if high
-   delay_usec(85);
+   polled_wait();
+   //elay_usec(85);
    
    word humidity = 0;
    for(int i = 0; i < 16; i++) {
@@ -99,8 +106,38 @@ word sensor_read(void) {
       }
    }
    
+   byte checksum = 0;
+   for(int i = 0; i < 8; i++) {
+      polled_wait();
+      delay_usec(40);
+      
+      if(PINF & SENSOR_MASK) { //Bit is a 1
+         checksum = checksum << 1;
+         checksum |= 0x01;
+         delay_usec(40);
+         } else {//Bit is a zero
+         checksum = checksum << 1;
+      }
+   }
+   
    cli();
-   return temp;
+   
+   char tempArray[6];
+   bool negative = 0x8000 & temp;
+   temp &= ~0x8000;
+   //calculation to F
+   
+   if(negative)
+   tempArray[0] = '-';
+   else
+   tempArray[0] = ' ';
+   char * tempPointer = &tempArray[1];
+   
+   int whole = temp / 10;
+   int decimal = temp % 10;
+   sprintf(tempPointer, "%d.%d", whole, decimal);
+   
+   return tempArray;
 }
 
 void polled_wait(void) {
