@@ -34,7 +34,8 @@ void serial_write(char);
 void serial_write_word(char *);
 char serial_read(void);
 void sensor_setup(void);
-char * sensor_read(void);
+word sensor_read(void);
+void temp_to_string(char *, word);
 //char * serial_read_word(void);
 
 int main(void) {
@@ -43,10 +44,10 @@ int main(void) {
    
     while (1) 
     {
-       char * temp = sensor_read();
-       
-         
-       serial_write_word(temp);
+       word temp = sensor_read();
+       char tempWord[6];
+       temp_to_string(tempWord, temp);
+       serial_write_word(tempWord);
        
        /*char test_hi = temp >> 8;
        char test_lo = (char) temp;
@@ -60,7 +61,7 @@ int main(void) {
     }
 }
 
-char * sensor_read(void) {
+word sensor_read(void) {
    sei();
    
    //Send signal to tell sensor to send data
@@ -123,8 +124,9 @@ char * sensor_read(void) {
    }
    
    cli();
-   
-   char tempArray[6];
+   return temp;
+}   
+void temp_to_string(char * tempArray, word temp) { 
    bool negative = 0x8000 & temp;
    temp &= ~0x8000;
    //calculation to F
@@ -138,8 +140,6 @@ char * sensor_read(void) {
    int whole = temp / 10;
    int decimal = temp % 10;
    sprintf(tempPointer, "%d.%d", whole, decimal);
-   
-   return tempArray;
 }
 
 void polled_wait(void) {
