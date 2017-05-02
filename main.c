@@ -39,8 +39,11 @@ float temp_to_f(word);
 void update_lamp(float);
 //char * serial_read_word(void);
 
-float TLOW = 80;
-float THIGH = 80.5;
+float TLOW = 80;     // temp low
+float THIGH = 80.5;  // temp high
+int PERIOD = 2;      // time in seconds between output
+bool PRINT = true;   // whether to receive output or not
+bool HEATING = false;// heater state
 
 
 int main(void) {
@@ -55,7 +58,9 @@ int main(void) {
        
        char tempWord[6];
        temp_to_string(tempWord, temp);
-       serial_write_word(tempWord);
+       
+       if(PRINT)
+         serial_write_word(tempWord);
    
        _delay_ms(1000);
     }
@@ -66,8 +71,10 @@ void update_lamp(float temp) {
    
    if(temp < TLOW) {
       PORTF |= LED_MASK;
+      HEATING = true;
    } else if(temp > THIGH) {
       PORTF &= ~LED_MASK;
+      HEATING = false;
    }
 }
 
