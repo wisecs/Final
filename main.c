@@ -7,8 +7,7 @@
  * 5V pin for sensor power
  * PORTF pin 0 (A0 on board) for sensor data IN
  * PORTF pin 1 (A1 on board) for LED
- 
- http://yaab-arduino.blogspot.com/2015/12/how-to-sprintf-float-with-arduino.html
+ * http://yaab-arduino.blogspot.com/2015/12/how-to-sprintf-float-with-arduino.html
  */ 
 
 #include <avr/io.h>
@@ -36,7 +35,13 @@ char serial_read(void);
 void sensor_setup(void);
 word sensor_read(void);
 void temp_to_string(char *, word);
+float temp_to_f(word);
+void update_lamp(float);
 //char * serial_read_word(void);
+
+float TLOW = 80;
+float THIGH = 80.5;
+
 
 int main(void) {
    _delay_ms(1000);
@@ -45,20 +50,37 @@ int main(void) {
     while (1) 
     {
        word temp = sensor_read();
+       float tempf = temp_to_f(temp);
+       update_lamp(tempf);
+       
        char tempWord[6];
        temp_to_string(tempWord, temp);
        serial_write_word(tempWord);
-       
-       /*char test_hi = temp >> 8;
-       char test_lo = (char) temp;
-       
-       serial_write(test_hi);
-       serial_write(test_lo);
-       serial_write(' ');
-       serial_write('\n');*/
-       
+   
        _delay_ms(1000);
     }
+}
+
+void update_lamp(float temp) {
+   DDRF |= LED_MASK;
+   
+   if(temp < TLOW) {
+      PORTF |= LED_MASK;
+   } else if(temp > THIGH) {
+      PORTF &= ~LED_MASK;
+   }
+}
+
+float temp_to_f(word temp) {
+   bool negative = 0x8000 & temp;
+   temp &= ~0x8000;
+   
+   float fah = (float) temp / 10.0;
+   fah = fah * 1.8 + 32;
+   if(negative)
+      fah *= -1;
+      
+   return fah;
 }
 
 word sensor_read(void) {
@@ -125,11 +147,13 @@ word sensor_read(void) {
    
    cli();
    return temp;
-}   
+} 
+  
 void temp_to_string(char * tempArray, word temp) { 
    bool negative = 0x8000 & temp;
    temp &= ~0x8000;
    //calculation to F
+   temp = temp * 1.8 + 320;
    
    if(negative)
    tempArray[0] = '-';
