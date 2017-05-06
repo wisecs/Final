@@ -16,6 +16,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include "acx.h"
 
 #define SENSOR_PIN 0
@@ -59,11 +60,63 @@ int main(void) {
 	while(true) {
 
 		if(RX_FLAG == true) {
-			serial_write_word(rx_word);
-			RX_FLAG = false;
-			//int i = 0;
-			
+			cli();
+			char * word_copy;
+			strcpy(word_copy, rx_word);
 
+			serial_write_word(word_copy);
+			RX_FLAG = false;
+
+			const char delim[2] = "\r";
+			word_copy = strtok(word_copy, delim);
+
+			for(int i = 0; i < rx_len; i++) {
+				word_copy[i] = tolower(word_copy[i]);
+			}
+
+			if(!strncmp(word_copy, "set", 3)) {
+				if(!strcmp(word_copy, "set")) {
+					//returns the values of all the parameter settings (TLOW, THIGH, RATE, HEX, PERIOD)
+				} else if(!strcmp(word_copy, "set on")) {
+					//set on
+				} else if(!strcmp(word_copy, "set off")) {
+					//set off					
+				} else if(strchr(word_copy, '=') != NULL) { //Split
+					const char delim2[2] = "=";
+					char * argument;
+					word_copy = strtok(word_copy, delim2);
+					argument = strtok(NULL, delim2);
+					
+					if(!strcmp(word_copy, "set hex")) {
+						if(!strcmp(argument, "on")) {
+							//set hex=on
+						} else if(!strcmp(argument, "off")) {
+							//set hex=off
+						} else {
+							//error
+						}
+					} else if(!strcmp(word_copy, "set tlow")) {
+						//check that argument is a number
+						//set tlow
+					} else if(!strcmp(word_copy, "set thigh")) {
+						//check that argument is a number
+						//set thigh
+					} else if(!strcmp(word_copy, "set period")) {
+						//check that argument is a number
+						//set thigh
+					} else {
+						//error
+					}
+				} else {
+					//error
+				}
+			} else if(!strncmp(word_copy, "help", 4)) {
+				//help
+			} else {
+				
+			}
+			
+			sei();
 		}
 	}
 
