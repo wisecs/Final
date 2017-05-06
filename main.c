@@ -39,20 +39,35 @@ float temp_to_f(word);
 void update_lamp(float);
 //char * serial_read_word(void);
 
+
 float TLOW = 80;     // temp low
 float THIGH = 80.5;  // temp high
 int PERIOD = 10;      // time in seconds between output
 bool PRINT = true;   // whether to receive output or not
 bool HEATING = false;// heater state
+int rx_len = 0;		//length of the last received word
+volatile bool RX_FLAG = false;	//true if a word has been received
+volatile char rx_word[100];		//last serial word received
+volatile int rx_i = 0;			//index for receiving a serial word
 
 
 int main(void) {
 	_delay_ms(1000);
 	serial_setup();
+	sei();
 	
+	while(true) {
 
+		if(RX_FLAG == true) {
+			serial_write_word(rx_word);
+			RX_FLAG = false;
+			//int i = 0;
+			
 
-	int timer = 0;
+		}
+	}
+
+	/*int timer = 0;
 	while (1) {
 		word temp = sensor_read();
 		float tempf = temp_to_f(temp);
@@ -68,7 +83,7 @@ int main(void) {
 		
 		timer++;
 		_delay_ms(1000);
-	}
+	}*/
 }
 
 void update_lamp(float temp) {
@@ -96,7 +111,7 @@ float temp_to_f(word temp) {
 }
 
 word sensor_read(void) {
-	sei();
+	cli();
 	
 	//Send signal to tell sensor to send data
 	DDRF |= SENSOR_MASK;    //Sets SENSOR_PIN for output from the temperature sensor
@@ -157,7 +172,7 @@ word sensor_read(void) {
 		}
 	}
 	
-	cli();
+	sei();
 	return temp;
 }
 
@@ -199,6 +214,7 @@ void serial_setup(void) {
 	
 	UCSR0B |= 1 << RXEN0;   //Enable receive
 	UCSR0B |= 1 << TXEN0;   //Enable transmit
+	UCSR0B |= 1 << RXCIE0;	//Enable receive interrupt
 	
 	UCSR0C |= 1 << UCSZ00;  //Setting number of data bits to 8
 	UCSR0C |= 1 << UCSZ01;
@@ -226,6 +242,18 @@ char serial_read(void) {
 		//wait until Receive Complete
 	}
 	return UDR0;
+}
+
+ISR(USART0_RX_vect) {
+	rx_word[rx_i] = UDR0;
+	//UDR0 = rx_word[rx_i];	//Echo back
+
+	if(rx_word[rx_i] == 0x0A || rx_word[rx_i] == 0x0D || rx_word[rx_i] == '\0') {
+		RX_FLAG = true;
+		rx_len = rx_i-1;
+		rx_i = 0;
+	} else 
+		rx_i++;
 }
 
 /*char * serial_read_word() {
