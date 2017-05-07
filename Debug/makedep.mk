@@ -4,5 +4,7 @@
 
 delay_usec.s
 
+helpMessage.c
+
 main.c
 
