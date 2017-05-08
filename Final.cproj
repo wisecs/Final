@@ -141,9 +141,6 @@
     <Compile Include="delay_usec.s">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="helpMessage.c">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="main.c">
       <SubType>compile</SubType>
     </Compile>

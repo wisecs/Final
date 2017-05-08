@@ -17,6 +17,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include <ctype.h>
 #include "acx.h"
 
@@ -165,44 +166,85 @@ void sensor_thread(void) {
 	
 		if(PRINT && timer == PERIOD) {
 			if(HEX) {
-				char tempWord[20];
+				char tempWord[30];
+				unsigned long int time = x_gtime();
 				word tmp_temp;
 				word low;
+				float tmp_low = TLOW;
 				word high;
+				float tmp_high = THIGH;
+				word test;
 
 				void * p1 = &tmp_temp;
 				void * p2 = &tempf;
 				memcpy(p1, p2, 4);
-				//sprintf(tempWord, "%x ", tmp_temp);
-				//serial_write_word(tempWord);
 
 				p1 = &low;
-				p2 = &TLOW;
+				p2 = &tmp_low;
 				memcpy(p1, p2, 4);
-				//sprintf(tempWord, "%x ", low);
-				//serial_write_word(tempWord);
 
 				p1 = &high;
-				p2 = &THIGH;
+				p2 = &tmp_high;
 				memcpy(p1, p2, 4);
-				//sprintf(tempWord, "%x ", high);
-				//serial_write_word(tempWord);
 
-				//sprintf(tempWord, "%d\r", HEATING);;
-				//serial_write_word(tempWord);
-				sprintf(tempWord, "%x %x %x %d\r", tmp_temp, low, high, HEATING);
+				//Variable names don't match up with what they contain
+				sprintf(tempWord, "%lx %x %x %d\r", time, tmp_temp, low, HEATING);
 				serial_write_word(tempWord);
 
+				/*tmp_temp = ((union { float f; unsigned int i; }){tempf}).i;
+				sprintf(tempWord, "%x\r", tmp_temp);
+				serial_write_word(tempWord);*/
+
+				/*//Printing out Current Temp
+				void * p1 = &tmp_temp;
+				void * p2 = &tempf;
+				memcpy(p1, p2, 4);
+
+				p1 = &test;
+				p2 = &tempf;
+				memcpy(p1, p2, 4);
+				sprintf(tempWord, "%lx %x ", time, tmp_temp);
+				serial_write_word(tempWord);
+
+				//Printing out Low
+				p1 = &low;
+				p2 = &tmp_low;
+				memcpy(p1, p2, 4);
+				
+				p1 = &test;
+				p2 = &tmp_low;
+				memcpy(p1, p2, 4);
+				sprintf(tempWord, "%x ", low);
+				serial_write_word(tempWord);
+
+				//Printing out High
+				p1 = &high;
+				p2 = &tmp_high;
+				memcpy(p1, p2, 4);
+
+				p1 = &test;
+				p2 = &tmp_high;
+				memcpy(p1, p2, 4);
+				sprintf(tempWord, "%x %d\r", high, HEATING);
+				serial_write_word(tempWord);*/
 			} else {
-				char tempWord[6];
-				ftemp_to_string(tempWord, tempf);
+				char tempWord[15];
+				//Timestamp
+				unsigned long int time = x_gtime();
+				sprintf(tempWord, "%lu: ", time);
+				serial_write_word(tempWord);
+
+				//Current Temp
+				ftemp_to_string(tempWord, tempf); 
 				serial_write_word(tempWord);
 				serial_write_word(", ");
 
+				//Low Temp
 				ftemp_to_string(tempWord, TLOW);
 				serial_write_word(tempWord);
 				serial_write_word(", ");
 
+				//High Temp
 				ftemp_to_string(tempWord, THIGH);
 				serial_write_word(tempWord);
 				serial_write_word(", ");

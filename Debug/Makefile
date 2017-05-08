@@ -37,7 +37,6 @@ SUBDIRS :=
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS +=  \
-../helpMessage.c \
 ../main.c
 
 
@@ -50,22 +49,18 @@ ASM_SRCS +=
 
 OBJS +=  \
 delay_usec.o \
-helpMessage.o \
 main.o
 
 OBJS_AS_ARGS +=  \
 delay_usec.o \
-helpMessage.o \
 main.o
 
 C_DEPS +=  \
 delay_usec.d \
-helpMessage.d \
 main.d
 
 C_DEPS_AS_ARGS +=  \
 delay_usec.d \
-helpMessage.d \
 main.d
 
 OUTPUT_FILE_PATH +=Final.elf
@@ -83,8 +78,6 @@ LINKER_SCRIPT_DEP+=
 
 
 # AVR32/GNU C Compiler
-
-
 
 
 
