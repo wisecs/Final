@@ -40,6 +40,7 @@ word sensor_read(void);
 void sensor_to_string(char *, word);
 void ftemp_to_string(char *, float);
 float sensor_to_F(word);
+word F_to_sensor(float);
 void update_lamp(float);
 
 void terminal_thread();
@@ -105,11 +106,11 @@ void terminal_thread(void) {
 					char set_print[25];
 					sprintf(set_print, "PERIOD = %d seconds\r", PERIOD);
 					serial_write_word(set_print);
-					} else if(!strcmp(word_copy, "set on")) {
+				} else if(!strcmp(word_copy, "set on")) {
 					PRINT = true;
-					} else if(!strcmp(word_copy, "set off")) {
+				} else if(!strcmp(word_copy, "set off")) {
 					PRINT = false;
-					} else if(strchr(word_copy, '=') != NULL) { //Split
+				} else if(strchr(word_copy, '=') != NULL) { //Split
 					const char delim2[2] = "=";
 					char * argument;
 					word_copy = strtok(word_copy, delim2);
@@ -117,29 +118,29 @@ void terminal_thread(void) {
 					
 					if(!strcmp(word_copy, "set hex")) {
 						if(!strcmp(argument, "on"))
-						HEX = true;
+							HEX = true;
 						else if(!strcmp(argument, "off"))
-						HEX = false;
+							HEX = false;
 						else
-						serial_write_word("Incorrect command\r");
-						} else if(!strcmp(word_copy, "set tlow")) {
+							serial_write_word("Incorrect command\r");
+					} else if(!strcmp(word_copy, "set tlow")) {
 						float low = atof(argument);
 						if(low != 0) //atof worked
-						TLOW = low;
+							TLOW = low;
 						else
-						serial_write_word("Incorrect temperature value\r");
-						} else if(!strcmp(word_copy, "set thigh")) {
+							serial_write_word("Incorrect temperature value\r");
+					} else if(!strcmp(word_copy, "set thigh")) {
 						float high = atof(argument);
 						if(high != 0) //atof worked
-						THIGH = high;
+							THIGH = high;
 						else
-						serial_write_word("Incorrect temperature value\r");
-						} else if(!strcmp(word_copy, "set period")) {
+							serial_write_word("Incorrect temperature value\r");
+					} else if(!strcmp(word_copy, "set period")) {
 						int time = atoi(argument);
 						if(!(time < 2)) //either too low or overflowed high
-						PERIOD = time;
+							PERIOD = time;
 						else
-						serial_write_word("Incorrect period value\r");
+							serial_write_word("Incorrect period value\r");
 					} else
 					serial_write_word("Incorrect command\r");
 				} else
@@ -160,34 +161,23 @@ void sensor_thread(void) {
 
 	while (1) {
 		word temp = sensor_read();
+		while(temp == 0xFFFF) {
+			temp = sensor_read();
+		}
 		float tempf = sensor_to_F(temp);
 		update_lamp(tempf);
-	
+		
 		if(PRINT && timer == PERIOD) {
 			if(HEX) {
 				char tempWord[30];
 				unsigned long int time = x_gtime();
-				word tmp_temp;
 				word low;
-				float tmp_low = TLOW;
 				word high;
-				float tmp_high = THIGH;
-				word test;
 
-				void * p1 = &tmp_temp;
-				void * p2 = &tempf;
-				memcpy(p1, p2, 4);
+				low = F_to_sensor(TLOW);
+				high = F_to_sensor(THIGH);
 
-				p1 = &low;
-				p2 = &tmp_low;
-				memcpy(p1, p2, 4);
-
-				p1 = &high;
-				p2 = &tmp_high;
-				memcpy(p1, p2, 4);
-
-				//Variable names don't match up with what they contain
-				sprintf(tempWord, "%lx %x %x %x %d\r", time, temp, tmp_temp, low, HEATING);
+				sprintf(tempWord, "%08lx %04x %04x %04x %d\r", time, temp, low, high, HEATING);
 				serial_write_word(tempWord);
 			} else {
 				char tempWord[15];
@@ -197,7 +187,7 @@ void sensor_thread(void) {
 				serial_write_word(tempWord);
 
 				//Current Temp
-				ftemp_to_string(tempWord, tempf); 
+				ftemp_to_string(tempWord, tempf);
 				serial_write_word(tempWord);
 				serial_write_word(", ");
 
@@ -219,25 +209,29 @@ void sensor_thread(void) {
 
 			timer = 0;
 		}
-	
+		
 		timer++;
 		x_delay(1000);
 	}
 }
 
+
+/********** Helper Methods **********/
+
 void update_lamp(float temp) {
 	if(temp < TLOW)
-		HEATING = true;
-	else if(temp > THIGH) 
-		HEATING = false;
+	HEATING = true;
+	else if(temp > THIGH)
+	HEATING = false;
 	
 	if(HEATING)
-		PORTF |= LED_MASK;
+	PORTF |= LED_MASK;
 	else
-		PORTF &= ~LED_MASK;
+	PORTF &= ~LED_MASK;
 	
 }
 
+//Returns 0xFFFF if checksum error
 word sensor_read(void) {
 	cli();
 	
@@ -299,11 +293,22 @@ word sensor_read(void) {
 			checksum = checksum << 1;
 		}
 	}
+
+	byte sum = humidity >> 8;
+	sum += (byte) humidity;
+	sum += temp >> 8;
+	sum += (byte) temp;
+
+	if(sum != checksum) {
+		sei();
+		return 0xFFFF;
+	}
 	
 	sei();
 	return temp;
 }
 
+//Convert a floating point value to a string
 void ftemp_to_string(char * tempArray, float temp) {
 	temp = temp * 10.0;
 	int whole = temp / 10;
@@ -311,6 +316,7 @@ void ftemp_to_string(char * tempArray, float temp) {
 	sprintf(tempArray, "%d.%d", whole, decimal);
 }
 
+//Convert a sensor-format value to a string
 void sensor_to_string(char * tempArray, word temp) {
 	bool negative = 0x8000 & temp;
 	temp &= ~0x8000;
@@ -328,6 +334,7 @@ void sensor_to_string(char * tempArray, word temp) {
 	sprintf(tempPointer, "%d.%d", whole, decimal);
 }
 
+//Convert a sensor-format value to a Fahrenheit float
 float sensor_to_F(word temp) {
 	bool negative = 0x8000 & temp;
 	temp &= ~0x8000;
@@ -338,6 +345,24 @@ float sensor_to_F(word temp) {
 	fah *= -1;
 	
 	return fah;
+}
+
+//Convert a Fahrenheit float to a sensor-format value
+word F_to_sensor(float temp) {
+	//Convert to C
+	temp -= 32;
+	temp /= 1.8;
+
+	//Figure out if negative for later
+	bool negative = (temp < 0);
+
+	//Convert to sensor format
+	temp *= 10;
+	word sensor_temp = (word) temp;
+	if(negative)
+		sensor_temp |= 0x8000;
+
+	return sensor_temp;
 }
 
 void polled_wait(void) {
@@ -399,29 +424,6 @@ ISR(USART0_RX_vect) {
 		RX_FLAG = true;
 		rx_len = rx_i-1;
 		rx_i = 0;
-	} else 
-		rx_i++;
+	} else
+	rx_i++;
 }
-
-/*char * serial_read_word() {
-static char data[20];
-int i = 0;
-uint32_t word_done = 0;
-while(true) {
-while(!(UCSR0A & (1 << RXC0)) || word_done != UINT32_MAX) {
-//wait until Receive Complete
-word_done++;
-}
-if(word_done == UINT32_MAX) {
-data[i] = '\0';
-break;
-}
-
-data[i] = UDR0;
-i++;
-word_done = 0;
-}
-
-return data;
-
-}*/
