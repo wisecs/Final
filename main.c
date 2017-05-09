@@ -7,7 +7,6 @@
 * 5V pin for sensor power
 * PORTF pin 0 (A0 on board) for sensor data IN
 * PORTF pin 1 (A1 on board) for LED
-* http://yaab-arduino.blogspot.com/2015/12/how-to-sprintf-float-with-arduino.html
 */
 
 #include <avr/io.h>
