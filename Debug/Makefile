@@ -72,7 +72,7 @@ ADDITIONAL_DEPENDENCIES:=
 OUTPUT_FILE_DEP:= ./makedep.mk
 
 LIB_DEP+=  \
-C:/Users/Drake/Documents/Atmel\ Studio/7.0/Final/libacx.a
+C:/Atmel\ Studio/Projects/Final/libacx.a
 
 LINKER_SCRIPT_DEP+= 
 

@@ -187,45 +187,8 @@ void sensor_thread(void) {
 				memcpy(p1, p2, 4);
 
 				//Variable names don't match up with what they contain
-				sprintf(tempWord, "%lx %x %x %d\r", time, tmp_temp, low, HEATING);
+				sprintf(tempWord, "%lx %x %x %x %d\r", time, temp, tmp_temp, low, HEATING);
 				serial_write_word(tempWord);
-
-				/*tmp_temp = ((union { float f; unsigned int i; }){tempf}).i;
-				sprintf(tempWord, "%x\r", tmp_temp);
-				serial_write_word(tempWord);*/
-
-				/*//Printing out Current Temp
-				void * p1 = &tmp_temp;
-				void * p2 = &tempf;
-				memcpy(p1, p2, 4);
-
-				p1 = &test;
-				p2 = &tempf;
-				memcpy(p1, p2, 4);
-				sprintf(tempWord, "%lx %x ", time, tmp_temp);
-				serial_write_word(tempWord);
-
-				//Printing out Low
-				p1 = &low;
-				p2 = &tmp_low;
-				memcpy(p1, p2, 4);
-				
-				p1 = &test;
-				p2 = &tmp_low;
-				memcpy(p1, p2, 4);
-				sprintf(tempWord, "%x ", low);
-				serial_write_word(tempWord);
-
-				//Printing out High
-				p1 = &high;
-				p2 = &tmp_high;
-				memcpy(p1, p2, 4);
-
-				p1 = &test;
-				p2 = &tmp_high;
-				memcpy(p1, p2, 4);
-				sprintf(tempWord, "%x %d\r", high, HEATING);
-				serial_write_word(tempWord);*/
 			} else {
 				char tempWord[15];
 				//Timestamp
